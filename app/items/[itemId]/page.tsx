@@ -121,7 +121,12 @@ export default function TodoDetails({
     <div className="max-w-3xl mx-auto p-4">
       <header className='mb-8'>
         <div className='w-24 h-12 cursor-pointer' onClick={handleLogoClick}>
-          <img src='/img.png' alt='logo image' className='w-full h-auto' />
+          <Image 
+            src='/img.png' 
+            alt='logo image' 
+            width={500}
+            height={500}
+          />
         </div>
       </header>
 
@@ -183,16 +188,17 @@ export default function TodoDetails({
             id="image-upload"
             className="hidden"
             accept="image/*"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) {
-                const reader = new FileReader();
-                reader.onloadend = () => {
-                  setImage(reader.result as string);
-                };
-                reader.readAsDataURL(file);
-              }
-            }}
+            onChange={handleImageChange}
+            // onChange={(e) => {
+            //   const file = e.target.files?.[0];
+            //   if (file) {
+            //     const reader = new FileReader();
+            //     reader.onloadend = () => {
+            //       setImage(reader.result as string);
+            //     };
+            //     reader.readAsDataURL(file);
+            //   }
+            // }}
           />
         </div>
 
