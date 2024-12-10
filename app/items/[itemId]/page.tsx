@@ -19,7 +19,7 @@ export default function TodoDetails({
   const [isCompleted, setIsCompleted] = useState(false);
   const [memo, setMemo] = useState('');
   const [image, setImage] = useState<string | null>(null);
-  const [imageFile, setImageFile] = useState<File | null>(null);
+  // const [imageFile, setImageFile] = useState<File | null>(null);
   const resolvedParams = React.use(params);
 
   useEffect(() => {
@@ -81,7 +81,7 @@ export default function TodoDetails({
           alert('파일 크기는 5MB 이하여야 합니다.');
           return;
         }
-        setImageFile(file);   // File 객체 저장
+        // setImageFile(file);   // File 객체 저장
 
         const imageUrl = URL.createObjectURL(file);   // 미리보기 URL 생성
         setImage(imageUrl);
@@ -165,7 +165,7 @@ export default function TodoDetails({
                 onClick={() => {
                   URL.revokeObjectURL(image);
                   setImage(null);
-                  setImageFile(null);
+                  // setImageFile(null);
                 }}
               >
                 <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
