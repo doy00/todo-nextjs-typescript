@@ -46,15 +46,27 @@ export const todoService = {
     }
   },
   // Todo 수정
-  updateTodo: async (id: number, data: Partial<Todo>): Promise<Todo> => {
+  updateTodo: async (id: number, data: {
+    name?: string;
+    memo?: string;
+    imageUrl?: string;
+    isCompleted?: boolean;  
+  }): Promise<Todo> => {
     const response = await axiosInstance.patch(`/items/${id}`, data);
     return response.data;
   },
   // Todo 삭제
   deleteTodo: async (id: number): Promise<void> => {
     await axiosInstance.delete(`/items/${id}`);
-  }
+  },
   // 이미지 업로드
-
+  uploadImage: async (formData: FormData): Promise<{ url: string }> => {
+    const response = await axiosInstance.post(`/images/upload`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
 
 };

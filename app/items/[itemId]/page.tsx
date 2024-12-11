@@ -19,7 +19,6 @@ export default function TodoDetails({
   const [isCompleted, setIsCompleted] = useState(false);
   const [memo, setMemo] = useState('');
   const [image, setImage] = useState<string | null>(null);
-  // const [imageFile, setImageFile] = useState<File | null>(null);
   const resolvedParams = React.use(params);
 
   useEffect(() => {
@@ -30,6 +29,14 @@ export default function TodoDetails({
         setName(fetchedTodo.name);
         setIsCompleted(fetchedTodo.isCompleted);
         setMemo(fetchedTodo.memo || '');
+
+        // 이미지 URL 확인을 위한 로깅
+        console.log('Fetched Todo Image URL:', fetchedTodo.imageUrl);
+
+        if (fetchedTodo.imageUrl) {
+          setImage(fetchedTodo.imageUrl);
+        console.log('fetchTodo: ', fetchedTodo);
+        }
       } catch (error) {
         console.error('Failed to fetch todo:', error);
       }
@@ -47,10 +54,46 @@ export default function TodoDetails({
       if (!todo) return;
 
       try {
-        await todoService.updateTodo(todo.id, { name, isCompleted, memo });
-        if (image) {
-          // [ ] 이미지 업로드 함수 
+        // 이미지 업로드 후 URL 받기
+        let updatedImageUrl = todo.imageUrl;
+        // const updateData = {
+        //   name,
+        //   isCompleted,
+        //   memo,
+        // };
+        // await todoService.updateTodo(todo.id, updateData);
+        // if (imageFile) {
+        //   const formData = new FormData();
+        //   formData.append('image', imageFile);
+        //   await todoService.uploadImage(todo.id, formData);
+        // }
+
+        // 이미지가 변경된 경우에만 이미지 업로드
+        if (image && image !== todo.imageUrl) {
+          // 새로 추가된 이미지인 경우
+          if (image.startsWith('blob:')) {
+            const formData = new FormData();
+            const response = await fetch(image);
+            const blob = await response.blob();
+            formData.append('image', blob, 'image.jpg');
+
+            const uploadResult = await todoService.uploadImage(formData);
+            console.log('Uploaded Image Result:', uploadResult);
+
+            updatedImageUrl = uploadResult.url; // 업로드된 이미지 URL
+          } 
         }
+        // 통합된 업데이트 요청
+        const updateData = {
+          name,
+          isCompleted,
+          memo,
+          imageUrl: updatedImageUrl
+        };
+        const updatedTodo = await todoService.updateTodo(todo.id, updateData);
+        console.log('Updated todo:', updatedTodo);
+        setTodo(updatedTodo);
+
         router.push('/');
       } catch (error) {
         console.error('Todo 수정을 실패했습니다(handleSubmit)', error);
@@ -71,12 +114,17 @@ export default function TodoDetails({
     };
 
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      e.preventDefault();
       const file = e.target.files?.[0];
+      if (!file) return;
+
       if (file) {
+        // 파일명 검증
         if (!/^[a-zA-Z]+$/.test(file.name.split('.')[0])) {
-          alert('이미지 파일이름은 영어로만 이루어져야 합니다. 다시 등록해주세요.');
+          alert('이미지 파일이름은 영어로만 이루어져야 합니다.');
           return;
         }
+        //파일 크기 검증
         if (file.size > 5 * 1024 * 1024) {
           alert('파일 크기는 5MB 이하여야 합니다.');
           return;
@@ -91,7 +139,7 @@ export default function TodoDetails({
     // 컴포넌트가 언마운트될 때 메모리 누수 방지
     useEffect(() => {
       return () => {
-        if (image) {
+        if (image && image.startsWith('blob:')) {
           URL.revokeObjectURL(image);
         }
       };
@@ -129,106 +177,98 @@ export default function TodoDetails({
           />
         </div>
       </header>
-
-      <div className="flex items-center gap-2 mb-4 p-4 flex items-center justify-center rounded-full border-2">
-        <button
-          onClick={handleToggleTodo}
-          className='w-6 h-6 rounded-full border-2 border-gray-400 flex items-center justify-center'
-          >
-            {isCompleted ? '✓' : ''}
-          </button>
-          <input
-            type='text'
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className='flex-2 text-xl font-semibold bg-transparent border-none focus:outline-none'
-          />
-      </div>
-      
-
-
-
-
-      <div className="space-y-6">
-        <div className="border-2 border-dashed rounded-lg p-4 min-h-[200px] relative">
-          {image ? (
-            <div className="relative w-full h-[200px]">
-              <Image
-                src={image}
-                alt="Todo image"
-                fill
-                className="object-cover rounded-lg"
-                
-              />
-              <button
-                className="absolute bottom-4 right-4 bg-gray-700 rounded-full p-2"
-                onClick={() => {
-                  URL.revokeObjectURL(image);
-                  setImage(null);
-                  // setImageFile(null);
-                }}
-              >
-                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                </svg>
-              </button>
+          <form onSubmit={handleSubmit} className='p-4'>
+            <div className="flex items-center gap-2 mb-4 p-4 flex items-center justify-center rounded-full border-2">
+                <button
+                  onClick={handleToggleTodo}
+                  className='w-6 h-6 rounded-full border-2 border-gray-400 flex items-center justify-center'
+                  >
+                    {isCompleted ? '✓' : ''}
+                </button>
+                <input
+                  type='text'
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className='flex-2 text-xl font-semibold bg-transparent border-none focus:outline-none'
+                />
             </div>
-          ) : (
-            <button
-              className="absolute bottom-4 right-4 bg-gray-100 rounded-full p-2"
-              onClick={() => document.getElementById('image-upload')?.click()}
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-            </button>
-          )}
-          <input
-            type="file"
-            id="image-upload"
-            className="hidden"
-            accept="image/*"
-            onChange={handleImageChange}
-            // onChange={(e) => {
-            //   const file = e.target.files?.[0];
-            //   if (file) {
-            //     const reader = new FileReader();
-            //     reader.onloadend = () => {
-            //       setImage(reader.result as string);
-            //     };
-            //     reader.readAsDataURL(file);
-            //   }
-            // }}
-          />
-        </div>
-
-        <div className="bg-yellow-50 rounded-lg p-4">
-          <h2 className="text-brown-600 mb-4">Memo</h2>
-          <textarea
-            value={memo}
-            onChange={(e) => setMemo(e.target.value)}
-            className="w-full bg-transparent border-none resize-none focus:outline-none min-h-[100px]"
-            placeholder="메모를 입력하세요"
-          />
-        </div>
-
-        <div className="flex gap-4 justify-center">
-          <button
-            onSubmit={handleSubmit}
-            onClick={() => router.push('/')}
-            className="px-6 py-2 rounded-full bg-gray-100 text-gray-800 hover:bg-gray-200"
-          >
-            ✓ 수정 완료
-          </button>
-          <button
-            onClick={handleDelete}
             
-            className="px-6 py-2 rounded-full bg-red-500 text-white hover:bg-red-600"
-          >
-            ✕ 삭제하기
-          </button>
-        </div>
-      </div>
+            <div className="space-y-6">
+              <div className="border-2 border-dashed rounded-lg p-4 min-h-[200px] relative">
+                {todo.imageUrl ? (
+                  <div className="relative w-full h-[200px]">
+                    <Image
+                      src={todo.imageUrl}
+                      alt="Todo image"
+                      fill
+                      className="object-cover rounded-lg"
+                      priority  // LCP 경고 해결
+                    />
+                    <button
+                      className="absolute bottom-4 right-4 bg-gray-700 rounded-full p-2"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation(); // 이벤트 전파 중단
+                        setImage(null);
+                      }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type='button'
+                    className="absolute bottom-4 right-4 bg-gray-100 rounded-full p-2"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      document.getElementById('image-upload')?.click();
+                    }}
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                  </button>
+                )}
+                <input
+                  type="file"
+                  id="image-upload"
+                  className="hidden"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  onClick={(e) => e.stopPropagation()} // 이벤트 전파 중단
+                />
+              </div>
+
+              <div className="bg-yellow-50 rounded-lg p-4">
+                <h2 className="text-brown-600 mb-4">Memo</h2>
+                <textarea
+                  value={memo}
+                  onChange={(e) => setMemo(e.target.value)}
+                  className="w-full bg-transparent border-none resize-none focus:outline-none min-h-[100px]"
+                  placeholder="메모를 입력하세요"
+                />
+              </div>
+
+              <div className="flex gap-4 justify-center">
+                <button
+                  type='submit'
+                  // onSubmit={handleSubmit}
+                  onClick={() => router.push('/')}
+                  className="px-6 py-2 rounded-full bg-gray-100 text-gray-800 hover:bg-gray-200"
+                >
+                  ✓ 수정 완료
+                </button>
+                <button
+                  onClick={handleDelete}
+                  
+                  className="px-6 py-2 rounded-full bg-red-500 text-white hover:bg-red-600"
+                >
+                  ✕ 삭제하기
+                </button>
+              </div>
+            </div>
+          </form>
     </div>
     )
 }
